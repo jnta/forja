@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 
+import type { AgentMessage } from "@/domain/state";
+
 export function Chat() {
   const [task, setTask] = useState("");
-  const [messages, setMessages] = useState<string[]>([]);
+  const [messages, setMessages] = useState<AgentMessage[]>([]);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(event: React.FormEvent) {
@@ -16,7 +18,7 @@ export function Chat() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ task }),
       });
-      const data = (await response.json()) as { messages: string[] };
+      const data = (await response.json()) as { messages: AgentMessage[] };
       setMessages(data.messages);
     } finally {
       setLoading(false);
@@ -45,9 +47,12 @@ export function Chat() {
         {messages.map((message, index) => (
           <li
             key={index}
-            className="rounded-lg border border-black/[.08] px-5 py-3 text-base dark:border-white/[.145]"
+            className="flex flex-col gap-1 rounded-lg border border-black/[.08] px-5 py-3 text-base dark:border-white/[.145]"
           >
-            {message}
+            <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+              {message.role}
+            </span>
+            <p className="whitespace-pre-wrap">{message.content}</p>
           </li>
         ))}
       </ul>

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "agent": {
+    "forja-orchestrator": {
+      "description": "Read-only routing and decision agent used by the Forja orchestrator. Has no filesystem or shell access.",
+      "mode": "primary",
+      "permission": {
+        "edit": "deny",
+        "bash": "deny",
+        "webfetch": "deny",
+        "websearch": "deny",
+        "task": "deny"
+      }
+    },
+    "forja-engineer": {
+      "description": "Coding agent used by the Forja engineers (backend, frontend, QA). Reads, writes, and runs commands in the workspace.",
+      "mode": "primary",
+      "permission": {
+        "edit": "allow",
+        "bash": "allow"
+      }
+    }
+  }
+}

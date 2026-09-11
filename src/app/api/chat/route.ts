@@ -8,7 +8,7 @@ const ChatRequestSchema = z.object({
 
 export async function POST(request: Request) {
   const { task } = ChatRequestSchema.parse(await request.json());
-  const result = await softwareTeamWorkflow.invoke({ task, messages: [] });
+  const result = await softwareTeamWorkflow.invoke({ task });
 
   return Response.json({ messages: result.messages });
 }

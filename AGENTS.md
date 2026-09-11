@@ -14,15 +14,24 @@ This project follows a layered (ports & adapters) architecture. Dependencies poi
 
 ## Layers
 
-- **`src/domain/`** — Contracts only. Plain TypeScript interfaces and types (`LLMEnginePort`, `ProjectState`, `LLMMessage`). No imports from Next.js, LangGraph, OpenCode, or any database/tooling driver. These are the boundaries that protect the core if we swap tools.
+- **`src/domain/`** — Contracts only. Plain TypeScript interfaces and types (`LLMEnginePort`, `CodingHarnessPort`, `ProjectState`, `LLMMessage`). No imports from Next.js, LangGraph, OpenCode, or any database/tooling driver. These are the boundaries that protect the core if we swap tools.
 
-- **`src/application/`** — Agent behaviors and LangGraph state graphs (`software-team.graph.ts`). Receives adapters via dependency injection (`createSoftwareTeamGraph({ llm })`); never imports a concrete adapter or Next.js.
+- **`src/application/`** — Agent behaviors and LangGraph state graphs (`software-team.graph.ts`). Receives adapters via dependency injection (`createSoftwareTeamGraph({ llm, harness })`); never imports a concrete adapter or Next.js.
 
-- **`src/infrastructure/`** — The messy, low-level technical integrations. Concrete adapters that implement domain ports (e.g. `adapters/openai/llm-engine.adapter.ts`). To switch from OpenCode to Claude Code, add a new adapter under `adapters/` — `domain/` and `application/` stay untouched.
+- **`src/infrastructure/`** — The messy, low-level technical integrations. Concrete adapters that implement domain ports (e.g. `adapters/opencode/llm-engine.adapter.ts`, `adapters/opencode/coding-harness.adapter.ts`). To swap the execution tool, add a new adapter under `adapters/` — `domain/` and `application/` stay untouched.
 
 - **`src/app/`** — The presentation layer: Next.js routes, React UI, and server handlers. Server actions and route handlers import the pre-configured workflow from `container.ts` and run it. Colocate UI/components/handlers inside the `app` directory using private folders (`_components/`, `_handlers/`, etc.) so they are opted out of routing.
 
-- **`src/container.ts`** — Composition root. The single place that binds abstract contracts to concrete implementations (e.g. `new OpenAILlmEngine()` → `createSoftwareTeamGraph`). This is the only file allowed to know both sides.
+- **`src/container.ts`** — Composition root. The single place that binds abstract contracts to concrete implementations (e.g. `new OpenCodeLlmEngine()` and `new OpenCodeCodingHarness()` → `createSoftwareTeamGraph`). This is the only file allowed to know both sides.
+
+## OpenCode adapter: two modes
+
+A single OpenCode server backs both modes, differing only in what the agent is allowed to touch:
+
+- **Engineers (backend, frontend, QA)** — `CodingHarnessPort`. `OpenCodeCodingHarness` runs the `forja-engineer` agent with tools enabled, scoped to `OPENCODE_WORKSPACE`, so the agent reads files, writes code and runs commands.
+- **Orchestrator (PO/PM/router)** — `LLMEnginePort`. `OpenCodeLlmEngine` runs the `forja-orchestrator` agent with tools disabled (per-message `tools` map plus `permission: deny` in `opencode.json`) as a pure text-in/text-out decision engine.
+
+The server is external: run `opencode serve` from this repo so `opencode.json` (the `forja-orchestrator`/`forja-engineer` agent definitions) loads, and point the app at it with `OPENCODE_SERVER_URL`.
 
 ## Rules
 

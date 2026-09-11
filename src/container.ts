@@ -1,9 +1,16 @@
 import { createSoftwareTeamGraph } from "@/application/software-team.graph";
-import type { LLMEnginePort } from "@/domain/ports";
-import { OpenAILlmEngine } from "@/infrastructure/adapters/openai/llm-engine.adapter";
+import { createOpenCodeClient } from "@/infrastructure/adapters/opencode/client";
+import { OpenCodeCodingHarness } from "@/infrastructure/adapters/opencode/coding-harness.adapter";
+import { OpenCodeLlmEngine } from "@/infrastructure/adapters/opencode/llm-engine.adapter";
 
-const llmEngine: LLMEnginePort = new OpenAILlmEngine();
+const openCodeClient = createOpenCodeClient();
 
-export const softwareTeamWorkflow = createSoftwareTeamGraph({ llm: llmEngine });
+const orchestratorEngine = new OpenCodeLlmEngine({ client: openCodeClient });
+const engineerHarness = new OpenCodeCodingHarness({ client: openCodeClient });
 
-export { llmEngine };
+export const softwareTeamWorkflow = createSoftwareTeamGraph({
+  llm: orchestratorEngine,
+  harness: engineerHarness,
+});
+
+export { openCodeClient };
