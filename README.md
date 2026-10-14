@@ -34,3 +34,10 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Forja product documentation
+
+- [Product requirements](docs/prd.md)
+- [Phased implementation plan](docs/implementation-plan.md)
+
+The implementation plan defines sequential code and test gates for the portability CLI while preserving the existing application architecture.
