@@ -1,6 +1,6 @@
 # Forja phased implementation plan
 
-Status: proposed; no implementation phase is complete.
+Status: Phases 1–4 complete (2026-10-14); Phases 5–12 not started.
 Source: [Forja PRD](./prd.md), draft 0.1, sections 1–97.
 This is the executable roadmap; the PRD remains the preserved product draft. Phases 1–10 deliver v1, Phase 11 completes additional authoring/personal-library functionality, and Phase 12 covers explicitly future ecosystem work.
 
@@ -31,12 +31,29 @@ For each completed phase update this document with date, code/PR links, test evi
 **Deliverables:** runnable local forja executable, package/build boundary, architecture decision, shared test fixtures and error conventions.
 **Tests/acceptance:** invoke the built executable as a subprocess; help/version succeed, invalid commands fail clearly, imports obey layer rules, CLI works without starting Next.js/OpenCode or loading LLM dependencies. Existing application checks pass. Package contents contain only intended CLI assets.
 
+### Phase 1 — completion record
+
+- Completed: 2026-10-14.
+- Code: `src/cli/` (entry `index.ts`, `main.ts` program factory, `container.ts` composition root, `exit-codes.ts`, `errors.ts`, `version.ts`, `commands/`), domain ports in `src/domain/{errors,diagnostics,filesystem,package-source,ir,harness-adapter}.ts`, infrastructure in `src/infrastructure/cli/{node-filesystem,console-reporter}.ts`, shared test helpers `src/test/helpers.ts`, and the layer guard `src/layer-boundaries.test.ts`.
+- Build/package boundary: `tsup.config.ts` produces a self-contained ESM bundle at `packages/cli/dist/cli.js`; `packages/cli/package.json` (`@forja/cli`, `bin.forja`, `files: ["dist"]`) is the standalone publishable manifest. `npm run cli:build` builds it; `npm run cli` runs it.
+- Decisions: [docs/decisions/0001-cli-foundation.md](./decisions/0001-cli-foundation.md) records packaging, Node >= 22, module locations, Commander 14.0.3 + tsup 8.5.1 selection (plus versions reserved for later phases), the exit-code contract 0/1/2/3/4 and the error conventions.
+- Test evidence (Node 26.8.2, Linux x64): `npm test` → 12 files / 38 tests pass; `npm run lint` → clean; `npx tsc --noEmit` → clean; `npm run build` → succeeds. The e2e test builds the bundle and invokes it as a subprocess: `--version` prints `0.1.0` (exit 0), `--help` and no-args print help (exit 0), `bogus` exits 2 with `FORJA-CLI-002`. The bundle scan proves no `@langchain/`, `@opencode-ai/`, `next/dist` or `react-dom`, and `npm pack --dry-run` contains only `package.json` + `dist/`.
+- Limitations: no subcommands yet (the command registry is intentionally empty; the positional fallback reports unknown commands until Phase 2 registers commands). Only Linux x64 was verified; macOS/Windows/WSL belong to Phase 10. The publishable manifest stays `private: true` until the release phase. npm/`package-lock.json` retained; pnpm workspaces remain deferred.
+
 ## Phase 2 — Canonical schemas, configuration and local library
 
 **Scope:** Skill, Agent, Workflow, Policy, Pack and normalized IR; project/global loading (8–17, 29, 33, 59–60, 69–71).
 **Implementation order:** 1. Specify versioned schemas and stable IDs. 2. Parse YAML and Markdown frontmatter through infrastructure. 3. Validate paths, names, references and graph relationships. 4. Define explicit global/project merge rules. 5. Normalize local definitions to deterministic IR; expose validate and list.
 **Deliverables:** schemas, IR contracts, local library reader, diagnostics with file/field locations, precedence documentation and fixtures.
 **Tests/acceptance:** valid definitions round-trip; malformed frontmatter/YAML, duplicate IDs, missing references, invalid versions, cycles, traversal and symlink escapes fail before writes. Test the complete precedence chain: defaults → global → packs → project → forja.local.yaml. Project/local overrides never change global files; forja.local.yaml is excluded from Git. Normalize harness-list/map examples, dependency-list/map examples, and fast/full, check/verify and quick/full command-object aliases or report a documented migration error. Verification commands remain strings and are never executed by validation. Stable ordering produces identical IR.
+
+### Phase 2 — completion record
+
+- Completed: 2026-10-14.
+- Code: domain contracts `src/domain/{references,config,serialization}.ts` and extended `src/domain/ir.ts`/`filesystem.ts`; Zod schemas `src/application/schemas/`; precedence `src/application/config/{merge,gitignore}.ts`; library reader `src/application/library/{paths,frontmatter,diagnostics,definitions,load}.ts`; use cases `src/application/use-cases/{validate,list}.ts`; YAML adapter `src/infrastructure/yaml/yaml-parser.ts`; CLI commands `src/cli/commands/{validate,list}.ts`; shared fixtures `src/test/library-fixtures.ts`.
+- Decisions: [docs/decisions/0002-canonical-schemas-and-precedence.md](./decisions/0002-canonical-schemas-and-precedence.md) fixes the on-disk layout, schemas, precedence/merge rules, alias normalization, safety guarantees and `FORJA-CFG-*` diagnostic codes.
+- Test evidence (Node 26.8.2, Linux x64): `npm test` → 15 files / 65 tests pass; `npm run lint` → clean; `npx tsc --noEmit` → clean; `npm run build` → succeeds. Coverage includes a valid round-trip, malformed frontmatter/YAML, duplicate ids, missing references, invalid versions, dependency cycles, traversal and symlink escapes, the full precedence chain, a read-only filesystem proving no writes, a fixture proving verification commands are not executed, deterministic ordering, and CLI `validate`/`list --json` subprocess runs against temporary project/global directories.
+- Limitations: packs contribute config but their remote content is not resolved yet (Phase 3); configured-but-not-installed components are warnings, not errors; `category` is free-form; harness extensions (PRD 70) are stripped until Phase 9. `FORJA_HOME` overrides the global root and is used by tests.
 
 ## Phase 3 — Version resolution, cache and lockfile
 
@@ -45,12 +62,28 @@ For each completed phase update this document with date, code/PR links, test evi
 **Deliverables:** resolver, source adapters, content cache, forja.lock serializer and reproducibility contract.
 **Tests/acceptance:** local fixture registries/Git repositories cover pinned versions, ranges, conflicting transitive constraints, cycles, missing versions, moving tags, corrupt cache, checksum mismatch and unavailable network. Risk summaries expose source, scripts and remote references before install; trust ask/deny/allow choices are testable. Noninteractive mode fails closed when confirmation is required unless explicit consent is supplied. Rejection writes no package/manifest/lock. Same manifest plus lock produces identical resolved content on two fresh directories. Locked mode does not silently upgrade; offline mode succeeds with complete cache and fails clearly when missing. Packages cannot escape extraction roots or execute bundled scripts. No public registry or placeholder PRD URL is assumed to exist.
 
+### Phase 3 — completion record
+
+- Completed: 2026-10-14.
+- Code: domain contracts `src/domain/{package-source,cache,lockfile,trust}.ts` and `SkillDefinition.version`; application `src/application/resolve/{source-spec,integrity,enumerate,lockfile,trust,resolver}.ts`; infrastructure `src/infrastructure/sources/{local,registry,git}-source.ts` and `src/infrastructure/cache/content-cache.ts`; `YamlSerializerPort` in the YAML adapter.
+- Decisions: [docs/decisions/0003-sources-resolution-and-lockfile.md](./decisions/0003-sources-resolution-and-lockfile.md) fixes source syntax, package identity, lockfile format, resolution rules, modes, cache and trust, plus `FORJA-PKG-*` codes.
+- Test evidence (Node 26.8.2, Linux x64): `npm test` → 20 files / 97 tests pass; `npm run lint` → clean; `npx tsc --noEmit` → clean; `npm run build` → succeeds. Coverage includes local registries and local Git repositories for pinned/range resolution, transitive packs, conflicting constraints, cycles, missing versions, moving tags (pinned to an immutable commit), corrupt cache, checksum mismatch, unavailable sources, locked/offline modes, reproducibility across fresh directories, trust ask/deny/allow, fail-closed noninteractive rejection that writes nothing, extraction-root escape rejection, and proof that bundled scripts are never executed. No network is used.
+- Limitations: only skills and packs are versioned (others record `0.0.0` and are pinned by source + commit); no user-facing install command yet (Phase 8); staging directories are cleaned by the caller; registry configuration is supplied programmatically until Phase 7 wires global config.
+
 ## Phase 4 — Pure compilation and safe synchronization
 
 **Scope:** adapter protocol and managed output lifecycle (4.6–4.7, 20–22, 24, 31).
 **Implementation order:** 1. Build a fixture compiler implementing the adapter contract. 2. Plan artifacts, ownership/checksums, collision handling and readable diffs. 3. Add dry-run/check paths. 4. Apply changes with staging, backups/recovery and concurrency protection. 5. Remove stale owned artifacts safely.
 **Deliverables:** shared sync planner/writer, state manifest, diff command, sync --dry-run and sync --check; documented recovery behavior.
 **Tests/acceptance:** diff and dry-run leave every file/cache/state unchanged; check returns a documented drift code. Second sync has no diff. Edited managed files and unmanaged target collisions block application. Stale files are removed only when still owned and unmodified. Inject failures during writes/state commit and prove recovery without lost manual content. Concurrent runs cannot corrupt state. Overlapping adapters deduplicate identical artifacts and reject differing bytes. Unknown ownership is never permission to overwrite. Interactive conflict choices show diff, overwrite, keep local or abort; noninteractive conflicts abort unless an explicit scoped flag is supplied. Tests prove keep-local preserves edits and reports unresolved drift, and overwrite requires explicit selection.
+
+### Phase 4 — completion record
+
+- Completed: 2026-10-14.
+- Code: domain `src/domain/sync.ts` (ownership state, actions, conflicts) and `FilesystemPort.rename`; application `src/application/sync/{hash,diff,state,planner,writer}.ts` and `src/application/use-cases/sync.ts`; CLI `src/cli/commands/{diff,sync,plan-output}.ts` plus `ExitCode.Drift`; test fixture `src/test/fixture-adapter.ts`.
+- Decisions: [docs/decisions/0004-managed-output-and-sync.md](./decisions/0004-managed-output-and-sync.md) documents the state manifest, planner rules, conflict handling, transactional writer/recovery, concurrency lock and `FORJA-SYNC-*` codes.
+- Test evidence (Node 26.8.2, Linux x64): `npm test` → 25 files / 123 tests pass; `npm run lint` → clean; `npx tsc --noEmit` → clean; `npm run build` → succeeds; the built CLI exposes `diff`/`sync` and reports "No changes"/"Up to date" on an empty project. Coverage includes create/update/unchanged/delete planning, edited-managed and unmanaged-collision conflicts, stale deletion only when owned and unmodified, overlapping-adapter dedupe vs mismatch, artifact escape rejection, keep-local drift, overwrite requiring explicit selection, injected write failure with full rollback, and a held lock refusing a concurrent run. `dry-run`/`check` write nothing and `check` surfaces drift.
+- Limitations: interactive prompt UI is deferred to Phase 7 (the resolver API and scoped flags exist and are tested); only configured adapters run, so real generated output arrives with the Phase 5 OpenCode adapter.
 
 ## Phase 5 — OpenCode portability adapter
 

@@ -1,0 +1,38 @@
+# Toolchain and tasks for this repo. Run `mise install` after cloning.
+# Docs: https://mise.jdx.dev
+
+[tools]
+node = "26.8.2"
+
+[env]
+# Local overrides and secrets (OPENCODE_SERVER_URL, OPENCODE_WORKSPACE, ...).
+# See .env.example for the keys. A missing file is ignored.
+_.file = ".env"
+
+[tasks.install]
+description = "Install dependencies"
+run = "npm install"
+
+[tasks.dev]
+description = "Start the Next.js dev server"
+run = "npm run dev"
+
+[tasks.build]
+description = "Build for production"
+run = "npm run build"
+
+[tasks.start]
+description = "Start the production server"
+run = "npm run start"
+
+[tasks.lint]
+description = "Lint with ESLint"
+run = "npm run lint"
+
+[tasks.test]
+description = "Run the test suite once"
+run = "npm run test"
+
+[tasks.serve]
+description = "Start the OpenCode server from this repo (loads the forja agents)"
+run = "opencode serve"

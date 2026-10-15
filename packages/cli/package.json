@@ -1,0 +1,17 @@
+{
+  "name": "@forja/cli",
+  "version": "0.1.0",
+  "description": "Forja CLI: define your AI engineering workflow once and use it across coding-agent harnesses.",
+  "license": "UNLICENSED",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "forja": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22"
+  }
+}

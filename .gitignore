@@ -20,6 +20,10 @@
 # production
 /build
 
+# forja cli build output
+/dist/
+/packages/cli/dist/
+
 # misc
 .DS_Store
 *.pem
