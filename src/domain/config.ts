@@ -22,6 +22,8 @@ export interface ForjaConfig {
   readonly verification: VerificationDefinition;
   /** Compatibility strict mode (PRD 34): unsupported semantics become errors. */
   readonly strict: boolean;
+  /** Allow instruction-only fallbacks for unsupported agent semantics. */
+  readonly instructionFallback: boolean;
 }
 
 export const CONFIG_SCOPE_ORDER = [

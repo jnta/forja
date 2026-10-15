@@ -19,6 +19,8 @@ export interface DesiredArtifact {
   readonly contents: string;
   readonly harness: string;
   readonly source: string;
+  /** Merges into an existing file by replacing a managed block. */
+  readonly merge?: boolean;
 }
 
 export interface PlanEntry {
@@ -129,11 +131,25 @@ export async function planSync(input: PlanInput): Promise<SyncPlan> {
       action = "unchanged";
     } else if (previous && previous.hash === currentHash) {
       action = "update";
+    } else if (previous) {
+      action = "conflict";
+      conflicts.push({
+        path: relative,
+        reason: "modified-managed",
+        harness,
+        source,
+        current,
+        desired,
+      });
+    } else if (group.some((artifact) => artifact.merge)) {
+      // A managed-block artifact already incorporates the current manual
+      // content, so adopting an unowned file does not overwrite it.
+      action = "update";
     } else {
       action = "conflict";
       conflicts.push({
         path: relative,
-        reason: previous ? "modified-managed" : "unmanaged-collision",
+        reason: "unmanaged-collision",
         harness,
         source,
         current,

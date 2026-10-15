@@ -27,6 +27,8 @@ export interface AgentDefinition {
   readonly capabilities: AgentCapabilities;
   /** Skill ids this agent may use. */
   readonly skills: readonly string[];
+  /** Harness-specific metadata (PRD 70), keyed by harness id. */
+  readonly extensions?: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
 }
 
 export interface SkillDefinition {
@@ -39,6 +41,10 @@ export interface SkillDefinition {
   readonly resources: readonly string[];
   /** Declared version from `skill.yaml`, when present. */
   readonly version?: string;
+  /** Absolute path to the skill directory, used to read bundled resources. */
+  readonly directory?: string;
+  /** Harness-specific metadata (PRD 70), keyed by harness id. */
+  readonly extensions?: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
   readonly category?: string;
   readonly tags: readonly string[];
   /** Declared dependencies, normalized from list or map form. */

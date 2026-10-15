@@ -365,6 +365,8 @@ async function readSkill(
     instructions: frontmatter.value.body.trim(),
     resources,
     version: metadata.version,
+    directory,
+    extensions: metadata.harness,
     category: metadata.category,
     tags: (metadata.tags ?? []).slice().sort(),
     dependencies,
@@ -489,6 +491,7 @@ async function readAgent(
       network: agent.capabilities.network ?? false,
     },
     skills: skillRefs.map((ref) => ref.name),
+    extensions: agent.harness,
   };
 }
 

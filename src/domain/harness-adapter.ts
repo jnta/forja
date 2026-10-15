@@ -18,6 +18,10 @@ export interface ProjectContext {
   /** Root of the global Forja library (e.g. `~/.forja`). */
   readonly globalDir: string;
   readonly homeDir: string;
+  /** Strict compatibility: degraded semantics become errors. */
+  readonly strict?: boolean;
+  /** Allow instruction-only fallbacks for unsupported agent semantics. */
+  readonly instructionFallback?: boolean;
 }
 
 export interface HarnessDetection {
@@ -41,6 +45,12 @@ export interface GeneratedArtifact {
   readonly path: string;
   readonly kind: ArtifactKind;
   readonly contents: string;
+  /**
+   * True for artifacts that merge into an existing file by replacing a managed
+   * block (e.g. `AGENTS.md`). The desired contents already incorporate the
+   * current manual content, so adopting an unowned file is safe.
+   */
+  readonly merge?: boolean;
 }
 
 export interface HarnessState {

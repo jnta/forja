@@ -1,6 +1,6 @@
 # Forja phased implementation plan
 
-Status: Phases 1–4 complete (2026-10-14); Phases 5–12 not started.
+Status: Phases 1–6 complete (2026-10-15); Phases 7–12 not started.
 Source: [Forja PRD](./prd.md), draft 0.1, sections 1–97.
 This is the executable roadmap; the PRD remains the preserved product draft. Phases 1–10 deliver v1, Phase 11 completes additional authoring/personal-library functionality, and Phase 12 covers explicitly future ecosystem work.
 
@@ -92,12 +92,28 @@ For each completed phase update this document with date, code/PR links, test evi
 **Deliverables:** OpenCode compiler adapter distinct from the existing execution adapters; fixtures and capability diagnostics.
 **Tests/acceptance:** golden outputs and native-format validation cover skills, assets/scripts, agent restrictions and explicit extensions. Existing opencode.json and AGENTS.md manual content is preserved. Unsupported restrictions produce blocking diagnostics when safety would be weakened. A local fixture project validates, previews, syncs and resyncs without drift; native discovery smoke testing uses an installed harness when available, with version/evidence recorded.
 
+### Phase 5 — completion record
+
+- Completed: 2026-10-15.
+- Code: `src/infrastructure/adapters/portability/opencode/{opencode-adapter,skills,agents,permissions,instructions}.ts` (compiler adapter, distinct from the runtime `adapters/opencode/`); IR gained `SkillDefinition.directory`/`extensions` and `AgentDefinition.extensions`; `harness:` blocks added to the agent/skill schemas; `GeneratedArtifact.merge` for managed-block artifacts; the CLI container now registers the adapter and `runSync` selects adapters from the merged harness configuration.
+- Decisions: [docs/decisions/0005-opencode-adapter.md](./decisions/0005-opencode-adapter.md) records the tested native format (OpenCode v2.0.28, docs 2026-10-15), locations, the capability matrix, extensions, the managed `AGENTS.md` block and `FORJA-COMPAT-*` codes.
+- Test evidence (Node 26.8.2, Linux x64): `npm test` → 28 files / 138 tests pass; `npm run lint` → clean; `npx tsc --noEmit` → clean; `npm run build` → succeeds. Golden tests assert the exact `SKILL.md` and agent Markdown, resource copying, instructions block, capability warnings (`readonly` shell → `bash: deny`), explicit extensions, and that `opencode.json` is never emitted. A fixture project previews, syncs and resyncs without drift while preserving manual `AGENTS.md` content; the native smoke test records the installed `opencode` version when present.
+- Limitations: only the OpenCode adapter exists (Codex/Claude in Phase 6); the IR compiles all local definitions (selection/resolution wiring lands with `add` in Phase 8); `shell: readonly` degrades to disabled shell because OpenCode has no exact primitive.
+
 ## Phase 6 — Claude Code and Codex adapters
 
 **Scope:** complete initial three-harness portability (30–32).
 **Implementation order:** 1. Document supported native formats and explicit fallback rules per adapter. 2. Implement Codex skills and hierarchical AGENTS.md integration. 3. Implement Claude skills/agents/tool restrictions and CLAUDE.md integration. 4. Add shared multi-harness compile and capability tests.
 **Deliverables:** two compiler adapters, harness list/enable/disable/info and a tested compatibility matrix.
 **Tests/acceptance:** each adapter passes the shared contract suite and golden/native-format tests. Preserve nested instruction hierarchy and existing user configuration. Report exact/degraded/unsupported capability states and stable diagnostic codes; strict compatibility makes unsupported semantics errors. Disabled shell can be an explicit safe fallback for unrepresentable readonly shell, with a warning; never map it silently to full shell. Instruction-only fallbacks require explicit configuration and describe their limitations. Combined sync handles shared .agents/skills and AGENTS.md without collisions. Disabling a harness removes only exclusive, unmodified owned artifacts.
+
+### Phase 6 — completion record
+
+- Completed: 2026-10-15.
+- Code: `src/domain/capabilities.ts` (capability negotiation + diagnostics); `src/infrastructure/adapters/portability/{shared,claude,codex}` with the Claude and Codex compiler adapters and the shared skill/instructions renderers; `ProjectContext` gained `strict`/`instructionFallback`; config gained `compatibility.instructionFallback`; `runSync` blocks application on blocking diagnostics and passes compatibility options to adapters; `YamlDocumentPort` + `src/application/use-cases/harness.ts` + `forja harness list|enable|disable|info`.
+- Decisions: [docs/decisions/0006-claude-and-codex-adapters.md](./decisions/0006-claude-and-codex-adapters.md) records native formats, the capability matrix, strict/instruction-fallback rules, shared-output handling and `FORJA-COMPAT-*` codes.
+- Test evidence (Node 26.8.2, Linux x64): `npm test` → 33 files / 162 tests pass; `npm run lint` → clean; `npx tsc --noEmit` → clean; `npm run build` → succeeds. A shared contract suite runs all three adapters; golden tests cover Claude tool allowlists and Codex TOML; tests cover degraded/unsupported states, strict mode, instruction-only fallback, combined sync dedup of `.agents/skills`/`AGENTS.md`, harness enable/disable preserving `forja.yaml`, and removal of only a disabled harness's exclusive artifacts. CLI smoke: `harness list`, three-harness `sync`, `harness disable codex`, resync removes only `.codex/agents/*.toml`.
+- Limitations: shared `.agents/skills` use portable frontmatter only (harness-specific skill extensions are not emitted there); Codex cannot enforce read-only files/offline network, so those require the instruction fallback; interactive prompt UI remains Phase 7.
 
 ## Phase 7 — Initialization and global/project workflows
 

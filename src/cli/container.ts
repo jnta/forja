@@ -2,9 +2,12 @@ import type { DiagnosticReporterPort } from "@/domain/diagnostics";
 import type { FilesystemPort } from "@/domain/filesystem";
 import type { HarnessAdapterPort } from "@/domain/harness-adapter";
 import type { PackageSourcePort } from "@/domain/package-source";
-import type { YamlParserPort } from "@/domain/serialization";
+import type { YamlDocumentPort, YamlParserPort } from "@/domain/serialization";
 import { ConsoleDiagnosticReporter } from "@/infrastructure/cli/console-reporter";
 import { NodeFilesystem } from "@/infrastructure/cli/node-filesystem";
+import { ClaudeCompilerAdapter } from "@/infrastructure/adapters/portability/claude/claude-adapter";
+import { CodexCompilerAdapter } from "@/infrastructure/adapters/portability/codex/codex-adapter";
+import { OpenCodeCompilerAdapter } from "@/infrastructure/adapters/portability/opencode/opencode-adapter";
 import { YamlParser } from "@/infrastructure/yaml/yaml-parser";
 
 /**
@@ -14,7 +17,7 @@ import { YamlParser } from "@/infrastructure/yaml/yaml-parser";
  */
 export interface CliServices {
   readonly filesystem: FilesystemPort;
-  readonly yaml: YamlParserPort;
+  readonly yaml: YamlParserPort & YamlDocumentPort;
   readonly packageSources: readonly PackageSourcePort[];
   readonly adapters: readonly HarnessAdapterPort[];
   readonly reporter: DiagnosticReporterPort;
@@ -55,7 +58,11 @@ export function createCliServices(
     yaml: new YamlParser(),
     // Source adapters arrive in Phase 3 and compiler adapters in Phases 5–6.
     packageSources: [],
-    adapters: [],
+    adapters: [
+      new OpenCodeCompilerAdapter({ filesystem }),
+      new ClaudeCompilerAdapter({ filesystem }),
+      new CodexCompilerAdapter({ filesystem }),
+    ],
     reporter,
     projectDir,
     globalDir,

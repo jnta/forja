@@ -29,3 +29,16 @@ export interface YamlSerializerPort {
   /** Serialize a plain value to YAML text. */
   stringify(value: unknown): string;
 }
+
+export interface HarnessToggle {
+  readonly id: string;
+  readonly enabled: boolean;
+}
+
+export interface YamlDocumentPort {
+  /**
+   * Set the `harnesses` mapping in a `forja.yaml` document, preserving other
+   * keys. `source` may be empty when the file does not exist yet.
+   */
+  updateHarnesses(source: string, harnesses: readonly HarnessToggle[]): string;
+}

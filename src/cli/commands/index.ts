@@ -1,6 +1,7 @@
 import type { Command } from "commander";
 
 import { diffCommand } from "./diff";
+import { harnessCommand } from "./harness";
 import { listCommand } from "./list";
 import { syncCommand } from "./sync";
 import { validateCommand } from "./validate";
@@ -14,6 +15,7 @@ export const commandModules: readonly CommandModule[] = [
   listCommand,
   diffCommand,
   syncCommand,
+  harnessCommand,
 ];
 
 export function registerCommands(

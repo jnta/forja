@@ -1,7 +1,9 @@
-import { parse, stringify } from "yaml";
+import { parse, parseDocument, stringify } from "yaml";
 
 import {
   YamlParseError,
+  type HarnessToggle,
+  type YamlDocumentPort,
   type YamlParserPort,
   type YamlSerializerPort,
 } from "@/domain/serialization";
@@ -24,7 +26,9 @@ function firstLinePos(error: unknown): LinePos | undefined {
 }
 
 /** `yaml`-backed YAML parser. */
-export class YamlParser implements YamlParserPort, YamlSerializerPort {
+export class YamlParser
+  implements YamlParserPort, YamlSerializerPort, YamlDocumentPort
+{
   parse(source: string, options: { readonly sourceName?: string } = {}): unknown {
     try {
       return parse(source, { prettyErrors: true, uniqueKeys: true });
@@ -43,5 +47,15 @@ export class YamlParser implements YamlParserPort, YamlSerializerPort {
 
   stringify(value: unknown): string {
     return stringify(value, { lineWidth: 0 });
+  }
+
+  updateHarnesses(source: string, harnesses: readonly HarnessToggle[]): string {
+    const document = parseDocument(source.length > 0 ? source : "version: 1\n");
+    const mapping: Record<string, { enabled: boolean }> = {};
+    for (const harness of [...harnesses].sort((a, b) => a.id.localeCompare(b.id))) {
+      mapping[harness.id] = { enabled: harness.enabled };
+    }
+    document.set("harnesses", mapping);
+    return document.toString();
   }
 }

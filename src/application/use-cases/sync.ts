@@ -1,6 +1,8 @@
 import path from "node:path";
 
 import type { Diagnostic } from "@/domain/diagnostics";
+import { hasErrors } from "@/domain/diagnostics";
+import type { ForjaConfig } from "@/domain/config";
 import type { FilesystemPort } from "@/domain/filesystem";
 import type { HarnessAdapterPort } from "@/domain/harness-adapter";
 import type { ForjaIr } from "@/domain/ir";
@@ -68,7 +70,9 @@ async function readState(
 
 async function compileArtifacts(
   deps: SyncDeps,
+  adapters: readonly HarnessAdapterPort[],
   ir: ForjaIr,
+  config: ForjaConfig,
   paths: LibraryPaths,
   diagnostics: Diagnostic[],
 ): Promise<DesiredArtifact[]> {
@@ -76,10 +80,12 @@ async function compileArtifacts(
     projectDir: paths.projectDir,
     globalDir: paths.globalDir,
     homeDir: deps.filesystem.homeDir(),
+    strict: config.strict,
+    instructionFallback: config.instructionFallback,
   };
   const artifacts: DesiredArtifact[] = [];
 
-  for (const adapter of deps.adapters) {
+  for (const adapter of adapters) {
     const validation = await adapter.validate(ir, context);
     diagnostics.push(...validation);
     const generated = await adapter.compile(ir, context);
@@ -90,11 +96,24 @@ async function compileArtifacts(
         contents: artifact.contents,
         harness: adapter.id,
         source: `${artifact.kind}:${path.basename(artifact.path)}`,
+        merge: artifact.merge,
       });
     }
   }
 
   return artifacts;
+}
+
+/** Select adapters from the merged harness configuration. */
+function selectAdapters(
+  adapters: readonly HarnessAdapterPort[],
+  harnesses: readonly { readonly id: string; readonly enabled: boolean }[],
+): readonly HarnessAdapterPort[] {
+  if (harnesses.length === 0) return adapters;
+  const enabled = new Set(
+    harnesses.filter((harness) => harness.enabled).map((harness) => harness.id),
+  );
+  return adapters.filter((adapter) => enabled.has(adapter.id));
 }
 
 /**
@@ -115,7 +134,15 @@ export async function runSync(
   diagnostics.push(...library.diagnostics);
 
   const previousState = await readState(deps.filesystem, options.paths.projectDir, diagnostics);
-  const artifacts = await compileArtifacts(deps, library.ir, options.paths, diagnostics);
+  const adapters = selectAdapters(deps.adapters, library.config.harnesses);
+  const artifacts = await compileArtifacts(
+    deps,
+    adapters,
+    library.ir,
+    library.config,
+    options.paths,
+    diagnostics,
+  );
   const plan = await planSync({
     filesystem: deps.filesystem,
     projectDir: options.paths.projectDir,
@@ -132,6 +159,19 @@ export async function runSync(
       deleted: 0,
       drift: [],
       aborted: false,
+      state: previousState,
+    };
+  }
+
+  // Blocking diagnostics (e.g. unsupported agent semantics) stop application.
+  if (hasErrors(diagnostics)) {
+    return {
+      plan,
+      diagnostics,
+      applied: 0,
+      deleted: 0,
+      drift: [],
+      aborted: true,
       state: previousState,
     };
   }

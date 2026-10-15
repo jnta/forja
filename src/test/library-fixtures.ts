@@ -57,6 +57,7 @@ export interface AgentFixture {
   readonly shell?: string;
   readonly network?: string;
   readonly skills?: string;
+  readonly harness?: string;
   readonly body?: string;
   readonly frontmatter?: string;
 }
@@ -74,6 +75,7 @@ export function agentManifest(fixture: AgentFixture = {}): string {
     fixture.network !== undefined ? `  network: ${fixture.network}` : null,
     "skills:",
     fixture.skills ?? "  []",
+    fixture.harness ?? null,
   ]
     .filter((line): line is string => line !== null)
     .join("\n");

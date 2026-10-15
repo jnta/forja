@@ -25,12 +25,22 @@ export const configContribution = z.object({
   workflows: componentNameList.optional(),
   policies: componentNameList.optional(),
   verification: verificationInput.optional(),
-  compatibility: z.object({ strict: z.boolean().optional() }).optional(),
+  compatibility: z
+    .object({
+      strict: z.boolean().optional(),
+      instructionFallback: z.boolean().optional(),
+    })
+    .optional(),
 });
 
 export const configSchema = configContribution.extend({
   version: z.number().int().optional(),
 });
+
+/** Harness-specific metadata blocks (`harness: { opencode: { model: ... } }`). */
+export const harnessExtensions = z
+  .record(z.string(), z.record(z.string(), z.unknown()))
+  .optional();
 
 export const skillMetadataSchema = z.object({
   version: exactVersion.optional(),
@@ -39,6 +49,7 @@ export const skillMetadataSchema = z.object({
   compatibility: z.record(z.string(), z.string()).optional(),
   dependencies: componentNameList.optional(),
   resources: z.array(z.string().min(1)).optional(),
+  harness: harnessExtensions,
 });
 
 export const skillFrontmatterSchema = z.object({
@@ -67,6 +78,7 @@ export const agentSchema = z.object({
     network: z.boolean().optional(),
   }),
   skills: componentNameList,
+  harness: harnessExtensions,
 });
 
 export const workflowStepSchema = z.union([

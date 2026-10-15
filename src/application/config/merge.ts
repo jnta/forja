@@ -42,6 +42,7 @@ export function mergeConfig(
 ): ForjaConfig {
   let version = SUPPORTED_CONFIG_VERSION;
   let strict = false;
+  let instructionFallback = false;
   let verification: VerificationDefinition = { fast: "", full: "" };
   const harnesses = new Map<string, boolean>();
   const refs = new Map<ComponentKind, Map<string, ComponentRef>>([
@@ -123,6 +124,9 @@ export function mergeConfig(
     if (layer.value.compatibility?.strict !== undefined) {
       strict = layer.value.compatibility.strict;
     }
+    if (layer.value.compatibility?.instructionFallback !== undefined) {
+      instructionFallback = layer.value.compatibility.instructionFallback;
+    }
   }
 
   const harnessEntries: HarnessEntry[] = [...harnesses.entries()]
@@ -141,5 +145,6 @@ export function mergeConfig(
     policies: sorted("policy"),
     verification,
     strict,
+    instructionFallback,
   };
 }
