@@ -1,6 +1,7 @@
 import { constants } from "node:fs";
 import {
   access,
+  cp,
   lstat,
   mkdir,
   readFile,
@@ -59,6 +60,15 @@ export class NodeFilesystem implements FilesystemPort {
     }
   }
 
+  async isWritable(target: string): Promise<boolean> {
+    try {
+      await access(target, constants.W_OK);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   async stat(target: string): Promise<FileInfo | null> {
     try {
       const stats = await lstat(target);
@@ -101,6 +111,10 @@ export class NodeFilesystem implements FilesystemPort {
 
   async rename(from: string, to: string): Promise<void> {
     await rename(from, to);
+  }
+
+  async copy(from: string, to: string): Promise<void> {
+    await cp(from, to, { recursive: true, force: true });
   }
 
   async remove(

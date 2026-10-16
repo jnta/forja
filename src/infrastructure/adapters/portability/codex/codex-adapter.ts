@@ -1,6 +1,7 @@
 import {
   analyzeCapabilities,
   capabilityDiagnostics,
+  declarationDiagnostics,
   type CapabilityFinding,
 } from "@/domain/capabilities";
 import type { Diagnostic } from "@/domain/diagnostics";
@@ -15,6 +16,7 @@ import type {
 import type { ForjaIr } from "@/domain/ir";
 
 import { composeManagedFile, renderInstructionsBlock } from "../shared/instructions";
+import { codexLocations } from "../shared/locations";
 import { skillArtifacts } from "../shared/skills";
 import { renderAgent } from "./agents";
 import { CODEX_CAPABILITIES } from "./permissions";
@@ -70,21 +72,24 @@ export class CodexCompilerAdapter implements HarnessAdapterPort {
   }
 
   async validate(ir: ForjaIr, context: ProjectContext): Promise<readonly Diagnostic[]> {
-    return ir.agents.flatMap((agent) =>
-      capabilityDiagnostics(
-        agent.id,
-        analyzeCapabilities(agent, CODEX_CAPABILITIES, context).findings,
-        context,
+    return [
+      ...ir.agents.flatMap((agent) =>
+        capabilityDiagnostics(
+          agent.id,
+          analyzeCapabilities(agent, CODEX_CAPABILITIES, context).findings,
+          context,
+        ),
       ),
-    );
+      ...declarationDiagnostics(ir, this.id, context),
+    ];
   }
 
   async compile(ir: ForjaIr, context: ProjectContext): Promise<readonly GeneratedArtifact[]> {
     const artifacts: GeneratedArtifact[] = [];
-    const skillsDir = this.filesystem.resolve(context.projectDir, ".agents", "skills");
+    const locations = codexLocations(this.filesystem, context);
 
     for (const skill of ir.skills) {
-      artifacts.push(...(await skillArtifacts(this.filesystem, skillsDir, skill)));
+      artifacts.push(...(await skillArtifacts(this.filesystem, locations.skillsDir, skill)));
     }
 
     for (const agent of ir.agents) {
@@ -96,12 +101,7 @@ export class CodexCompilerAdapter implements HarnessAdapterPort {
         continue;
       }
       artifacts.push({
-        path: this.filesystem.resolve(
-          context.projectDir,
-          ".codex",
-          "agents",
-          `${agent.id}.toml`,
-        ),
+        path: this.filesystem.resolve(locations.agentsDir, `${agent.id}.toml`),
         kind: "agent",
         contents: renderAgent(agent, analysis.resolved.shell, limitations),
       });
@@ -111,9 +111,11 @@ export class CodexCompilerAdapter implements HarnessAdapterPort {
       workflows: ir.workflows,
       policies: ir.policies,
       verification: ir.verification,
+      tools: ir.tools,
+      mcpServers: ir.mcpServers,
     });
     if (block.length > 0) {
-      const agentsMd = this.filesystem.resolve(context.projectDir, "AGENTS.md");
+      const agentsMd = locations.instructions;
       const existing = (await this.filesystem.exists(agentsMd))
         ? await this.filesystem.readFile(agentsMd)
         : null;

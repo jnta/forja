@@ -9,6 +9,7 @@ interface SyncFlags {
   readonly check?: boolean;
   readonly overwrite?: boolean;
   readonly keepLocal?: boolean;
+  readonly global?: boolean;
   readonly json?: boolean;
 }
 
@@ -21,6 +22,7 @@ export const syncCommand: CommandModule = {
       .option("--check", "exit non-zero when changes are required")
       .option("--overwrite", "overwrite conflicting managed files")
       .option("--keep-local", "keep conflicting files and report drift")
+      .option("--global", "synchronize the global (personal) configuration")
       .option("--json", "emit machine-readable JSON")
       .action(async (options: SyncFlags) => {
         const { services } = context;
@@ -37,6 +39,7 @@ export const syncCommand: CommandModule = {
               projectDir: services.projectDir,
               globalDir: services.globalDir,
             },
+            scope: options.global ? "global" : "project",
             mode,
             overwrite: options.overwrite,
             keepLocal: options.keepLocal,

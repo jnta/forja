@@ -1,0 +1,9 @@
+version: 1.0.0
+description: Java backend engineering.
+skills:
+  - testing@^1
+  - api-design@^1
+  - database-design@^1
+  - distributed-systems@^1
+agents:
+  - reviewer@^1

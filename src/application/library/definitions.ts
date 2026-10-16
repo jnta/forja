@@ -12,6 +12,7 @@ import type {
   SkillDefinition,
   WorkflowDefinition,
 } from "@/domain/ir";
+import type { McpServerDeclaration, ToolDeclaration } from "@/domain/tools";
 import type { ComponentKind, ComponentRef } from "@/domain/references";
 import { YamlParseError, type YamlParserPort } from "@/domain/serialization";
 
@@ -48,6 +49,13 @@ export interface DefinitionMaps {
   readonly workflows: Map<string, WorkflowDefinition>;
   readonly policies: Map<string, PolicyDefinition>;
   readonly packs: Map<string, PackDefinition>;
+  readonly tools: Map<string, ToolDeclaration>;
+  readonly mcpServers: Map<string, McpServerDeclaration>;
+}
+
+export interface DefinitionCollectors {
+  readonly tools: Map<string, ToolDeclaration>;
+  readonly mcpServers: Map<string, McpServerDeclaration>;
 }
 
 export interface DefinitionsResult {
@@ -379,6 +387,7 @@ async function readAgent(
   agentsDir: string,
   id: string,
   diagnostics: Diagnostic[],
+  collected: DefinitionCollectors,
 ): Promise<AgentDefinition | null> {
   const directory = deps.filesystem.resolve(agentsDir, id);
   const manifestPath = deps.filesystem.resolve(directory, AGENT_MANIFEST);
@@ -479,6 +488,33 @@ async function readAgent(
     diagnostics,
   );
 
+  for (const server of agent.mcp ?? []) {
+    const existing = collected.mcpServers.get(server.id);
+    if (existing) {
+      diagnostics.push(
+        makeDiagnostic({
+          code: CODES.duplicateId,
+          message: `MCP server "${server.id}" is declared more than once`,
+          file: manifestPath,
+          field: "mcp",
+        }),
+      );
+      continue;
+    }
+    collected.mcpServers.set(server.id, server as McpServerDeclaration);
+  }
+
+  const toolNames = agent.tools ?? [];
+  const mcpIds = new Set((agent.mcp ?? []).map((server) => server.id));
+  for (const name of toolNames) {
+    if (collected.tools.has(name)) continue;
+    collected.tools.set(name, {
+      name,
+      source: mcpIds.has(name) ? "mcp" : "builtin",
+      server: mcpIds.has(name) ? name : undefined,
+    });
+  }
+
   return {
     id,
     description,
@@ -491,6 +527,8 @@ async function readAgent(
       network: agent.capabilities.network ?? false,
     },
     skills: skillRefs.map((ref) => ref.name),
+    tools: [...toolNames].sort(),
+    mcp: [...mcpIds].sort(),
     extensions: agent.harness,
   };
 }
@@ -556,6 +594,10 @@ export async function readDefinitions(
   const workflows = new Map<string, WorkflowDefinition>();
   const policies = new Map<string, PolicyDefinition>();
   const packs = new Map<string, PackDefinition>();
+  const collectors: DefinitionCollectors = {
+    tools: new Map<string, ToolDeclaration>(),
+    mcpServers: new Map<string, McpServerDeclaration>(),
+  };
   const packConfigs: { id: string; config: ConfigContributionInput }[] = [];
   const policyContributions: ConfigContributionInput[] = [];
 
@@ -594,7 +636,7 @@ export async function readDefinitions(
         );
         continue;
       }
-      const agent = await readAgent(deps, agentsDir, id, diagnostics);
+      const agent = await readAgent(deps, agentsDir, id, diagnostics, collectors);
       if (agent !== null) agents.set(id, agent);
     }
   }
@@ -690,7 +732,15 @@ export async function readDefinitions(
   }
 
   return {
-    definitions: { skills, agents, workflows, policies, packs },
+    definitions: {
+      skills,
+      agents,
+      workflows,
+      policies,
+      packs,
+      tools: collectors.tools,
+      mcpServers: collectors.mcpServers,
+    },
     packConfigs,
     policyContributions,
   };

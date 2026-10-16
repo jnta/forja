@@ -266,12 +266,16 @@ describe("loadLibrary — safety", () => {
       homeDir: () => filesystem.homeDir(),
       resolve: (...segments) => filesystem.resolve(...segments),
       exists: (target) => filesystem.exists(target),
+      isWritable: (target) => filesystem.isWritable(target),
       stat: (target) => filesystem.stat(target),
       realpath: (target) => filesystem.realpath(target),
       readFile: (target) => filesystem.readFile(target),
       readDir: (target) => filesystem.readDir(target),
       rename: () => {
         throw new Error("rename must not be called");
+      },
+      copy: () => {
+        throw new Error("copy must not be called");
       },
       writeFile: () => {
         throw new Error("writeFile must not be called");

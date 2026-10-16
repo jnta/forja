@@ -98,7 +98,9 @@ describe("built forja executable", () => {
 
     expect(paths).toContain("dist/cli.js");
     for (const file of paths) {
-      expect(file === "package.json" || file.startsWith("dist/")).toBe(true);
+      expect(
+        file === "package.json" || file === "LICENSE" || file.startsWith("dist/"),
+      ).toBe(true);
     }
   });
 });

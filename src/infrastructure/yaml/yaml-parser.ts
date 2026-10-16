@@ -58,4 +58,18 @@ export class YamlParser
     document.set("harnesses", mapping);
     return document.toString();
   }
+
+  setConfigValue(source: string, key: string, value: unknown): string {
+    const document = parseDocument(source.length > 0 ? source : "version: 1\n");
+    const empty =
+      value === undefined ||
+      value === null ||
+      (Array.isArray(value) && value.length === 0);
+    if (empty) {
+      document.delete(key);
+    } else {
+      document.set(key, value);
+    }
+    return document.toString();
+  }
 }

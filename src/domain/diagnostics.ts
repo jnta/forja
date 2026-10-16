@@ -32,6 +32,9 @@ export interface DiagnosticReporterPort {
   reportAll(diagnostics: readonly Diagnostic[]): void;
 }
 
+/** Console verbosity for diagnostic reporting. */
+export type ReporterLevel = "quiet" | "normal" | "verbose" | "debug";
+
 export function hasErrors(diagnostics: readonly Diagnostic[]): boolean {
   return diagnostics.some((diagnostic) => diagnostic.severity === "error");
 }
@@ -51,6 +54,7 @@ export const CODES = {
   conflictingVerification: "FORJA-CFG-011",
   configReferenceNotFound: "FORJA-CFG-012",
   unsupportedVersion: "FORJA-CFG-013",
+  unknownExtension: "FORJA-CFG-014",
   dependencyConflict: "FORJA-PKG-001",
   missingVersion: "FORJA-PKG-002",
   missingSource: "FORJA-PKG-003",

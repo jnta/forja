@@ -27,6 +27,8 @@ export interface FilesystemPort {
   /** Resolve path segments against the current working directory. */
   resolve(...segments: readonly string[]): string;
   exists(path: string): Promise<boolean>;
+  /** Whether the current process can write into `path`. */
+  isWritable(path: string): Promise<boolean>;
   /** Returns `null` when the path does not exist. */
   stat(path: string): Promise<FileInfo | null>;
   /** Resolve symlinks; used to detect escapes outside a component directory. */
@@ -42,6 +44,8 @@ export interface FilesystemPort {
   mkdir(path: string, options?: { readonly recursive?: boolean }): Promise<void>;
   /** Rename/move a file or directory (used for atomic writes). */
   rename(from: string, to: string): Promise<void>;
+  /** Copy a file or directory tree. */
+  copy(from: string, to: string): Promise<void>;
   remove(
     path: string,
     options?: { readonly recursive?: boolean; readonly force?: boolean },

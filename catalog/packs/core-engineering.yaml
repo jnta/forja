@@ -1,0 +1,12 @@
+version: 1.0.0
+description: Core engineering agents and skills.
+skills:
+  - testing@^1
+  - debugging@^1
+  - code-review@^1
+  - refactoring@^1
+  - git-workflow@^1
+  - documentation@^1
+agents:
+  - implementer@^1
+  - reviewer@^1

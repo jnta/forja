@@ -1,0 +1,13 @@
+description: Independently reviews changes without editing.
+type: subagent
+capabilities:
+  filesystem:
+    read: true
+    write: false
+  shell:
+    enabled: true
+    mutating: false
+  network: false
+skills:
+  - code-review
+  - testing

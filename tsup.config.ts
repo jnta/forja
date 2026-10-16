@@ -19,6 +19,9 @@ export default defineConfig({
   platform: "node",
   target: "node22",
   bundle: true,
+  // zod lives in the app's dependencies, so mark it for bundling to keep the
+  // published CLI dependency-free.
+  noExternal: ["zod"],
   shims: true,
   banner: {
     // Commander is CJS; provide `require` so esbuild's dynamic-require shim works

@@ -8,7 +8,7 @@
  */
 import type { Diagnostic } from "./diagnostics";
 import { CODES, makeDiagnostic } from "./diagnostics";
-import type { AgentDefinition, ShellAccess } from "./ir";
+import type { AgentDefinition, ForjaIr, ShellAccess } from "./ir";
 
 export type CapabilityState = "exact" | "degraded" | "unsupported";
 
@@ -119,10 +119,26 @@ export function analyzeCapabilities(
 }
 
 /**
- * Convert findings to diagnostics. `unsupported` is an error unless an
- * instruction-only fallback was explicitly allowed; `degraded` is a warning
- * unless strict compatibility is on.
+ * Declarative tool/MCP declarations compile to instructions; native
+ * configuration is left to the user. This is a documented, non-silent fallback.
  */
+export function declarationDiagnostics(
+  ir: ForjaIr,
+  harnessId: string,
+  options: AnalysisOptions = {},
+): Diagnostic[] {
+  const hasDeclarations = ir.tools.length > 0 || ir.mcpServers.length > 0;
+  if (!hasDeclarations) return [];
+  return [
+    makeDiagnostic({
+      code: CODES.compatDegraded,
+      severity: options.strict ? "error" : "warning",
+      message: `${harnessId} documents tool/MCP declarations in instructions; native configuration is manual`,
+      resolution:
+        "Forja never writes secret values; configure the servers natively as described in the instructions.",
+    }),
+  ];
+}
 export function capabilityDiagnostics(
   agentId: string,
   findings: readonly CapabilityFinding[],

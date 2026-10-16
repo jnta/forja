@@ -10,7 +10,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "cli:build": "tsup",
-    "cli": "node packages/cli/dist/cli.js"
+    "cli": "node packages/cli/dist/cli.js",
+    "cli:package:check": "node scripts/check-cli-package.mjs",
+    "bench": "node scripts/benchmark.mjs"
   },
   "dependencies": {
     "@langchain/core": "^1.2.10",

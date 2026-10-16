@@ -1,6 +1,7 @@
 import { validateLibrary } from "@/application/use-cases/validate";
 
 import { CliExit, ExitCode } from "../exit-codes";
+import { resolveCommandScope } from "./paths";
 import type { CommandModule } from "./types";
 
 export const validateCommand: CommandModule = {
@@ -8,12 +9,14 @@ export const validateCommand: CommandModule = {
     program
       .command("validate")
       .description("validate configuration and local definitions")
+      .option("--global", "validate the global (personal) library")
       .option("--json", "emit machine-readable JSON")
-      .action(async (options: { json?: boolean }) => {
+      .action(async (options: { json?: boolean; global?: boolean }) => {
         const { services } = context;
+        const { libraryPaths } = resolveCommandScope(services, options.global);
         const result = await validateLibrary(
           { filesystem: services.filesystem, yaml: services.yaml },
-          { projectDir: services.projectDir, globalDir: services.globalDir },
+          libraryPaths,
         );
 
         if (options.json) {

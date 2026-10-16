@@ -2,15 +2,15 @@ import path from "node:path";
 
 import type { Diagnostic } from "@/domain/diagnostics";
 import { hasErrors } from "@/domain/diagnostics";
-import type { ForjaConfig } from "@/domain/config";
 import type { FilesystemPort } from "@/domain/filesystem";
-import type { HarnessAdapterPort } from "@/domain/harness-adapter";
+import type { HarnessAdapterPort, ProjectContext } from "@/domain/harness-adapter";
 import type { ForjaIr } from "@/domain/ir";
 import type { YamlParserPort } from "@/domain/serialization";
 import { emptyState, type ConflictChoice, type SyncState } from "@/domain/sync";
 
 import { loadLibrary, type LibraryPaths } from "../library/load";
 import { CODES, makeDiagnostic } from "../library/diagnostics";
+import { resolveScope, type Scope } from "../scope";
 import { planSync, type DesiredArtifact, type SyncPlan } from "../sync/planner";
 import { parseState } from "../sync/state";
 import { applySync, resolveConflicts } from "../sync/writer";
@@ -26,6 +26,7 @@ export type SyncMode = "apply" | "dry-run" | "check";
 export interface SyncOptions {
   readonly paths: LibraryPaths;
   readonly mode?: SyncMode;
+  readonly scope?: Scope;
   readonly overwrite?: boolean;
   readonly keepLocal?: boolean;
   readonly choices?: ReadonlyMap<string, ConflictChoice>;
@@ -72,17 +73,9 @@ async function compileArtifacts(
   deps: SyncDeps,
   adapters: readonly HarnessAdapterPort[],
   ir: ForjaIr,
-  config: ForjaConfig,
-  paths: LibraryPaths,
+  context: ProjectContext,
   diagnostics: Diagnostic[],
 ): Promise<DesiredArtifact[]> {
-  const context = {
-    projectDir: paths.projectDir,
-    globalDir: paths.globalDir,
-    homeDir: deps.filesystem.homeDir(),
-    strict: config.strict,
-    instructionFallback: config.instructionFallback,
-  };
   const artifacts: DesiredArtifact[] = [];
 
   for (const adapter of adapters) {
@@ -126,26 +119,38 @@ export async function runSync(
 ): Promise<SyncReport> {
   const mode = options.mode ?? "apply";
   const diagnostics: Diagnostic[] = [];
+  const homeDir = deps.filesystem.homeDir();
+  const scopePaths = resolveScope({
+    scope: options.scope ?? "project",
+    projectDir: options.paths.projectDir,
+    globalDir: options.paths.globalDir,
+    homeDir,
+  });
 
   const library = await loadLibrary(
-    { filesystem: deps.filesystem, yaml: deps.yaml },
-    options.paths,
+    {
+      filesystem: deps.filesystem,
+      yaml: deps.yaml,
+      knownHarnesses: deps.adapters.map((adapter) => adapter.id),
+    },
+    scopePaths.libraryPaths,
   );
   diagnostics.push(...library.diagnostics);
 
-  const previousState = await readState(deps.filesystem, options.paths.projectDir, diagnostics);
+  const previousState = await readState(deps.filesystem, scopePaths.outputRoot, diagnostics);
   const adapters = selectAdapters(deps.adapters, library.config.harnesses);
-  const artifacts = await compileArtifacts(
-    deps,
-    adapters,
-    library.ir,
-    library.config,
-    options.paths,
-    diagnostics,
-  );
+  const context: ProjectContext = {
+    projectDir: options.paths.projectDir,
+    globalDir: options.paths.globalDir,
+    homeDir,
+    scope: scopePaths.scope,
+    strict: library.config.strict,
+    instructionFallback: library.config.instructionFallback,
+  };
+  const artifacts = await compileArtifacts(deps, adapters, library.ir, context, diagnostics);
   const plan = await planSync({
     filesystem: deps.filesystem,
-    projectDir: options.paths.projectDir,
+    projectDir: scopePaths.outputRoot,
     artifacts,
     state: previousState,
   });
@@ -198,7 +203,7 @@ export async function runSync(
 
   const result = await applySync({
     filesystem: deps.filesystem,
-    projectDir: options.paths.projectDir,
+    projectDir: scopePaths.outputRoot,
     plan,
     previousState,
     decisions: resolution.decisions,

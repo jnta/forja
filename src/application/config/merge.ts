@@ -22,13 +22,14 @@ export interface ConfigLayer {
 }
 
 const COMPONENT_FIELDS: ReadonlyArray<{
-  field: "agents" | "skills" | "workflows" | "policies";
+  field: "agents" | "skills" | "workflows" | "policies" | "packs";
   kind: ComponentKind;
 }> = [
   { field: "agents", kind: "agent" },
   { field: "skills", kind: "skill" },
   { field: "workflows", kind: "workflow" },
   { field: "policies", kind: "policy" },
+  { field: "packs", kind: "pack" },
 ];
 
 /**
@@ -45,11 +46,13 @@ export function mergeConfig(
   let instructionFallback = false;
   let verification: VerificationDefinition = { fast: "", full: "" };
   const harnesses = new Map<string, boolean>();
+  const sources = new Set<string>();
   const refs = new Map<ComponentKind, Map<string, ComponentRef>>([
     ["skill", new Map()],
     ["agent", new Map()],
     ["workflow", new Map()],
     ["policy", new Map()],
+    ["pack", new Map()],
   ]);
 
   for (const layer of layers) {
@@ -102,6 +105,10 @@ export function mergeConfig(
       }
     }
 
+    if (layer.value.sources !== undefined) {
+      for (const source of layer.value.sources) sources.add(source);
+    }
+
     if (layer.value.verification !== undefined) {
       const normalized = normalizeVerification(layer.value.verification);
       if (isSchemaIssue(normalized)) {
@@ -143,6 +150,8 @@ export function mergeConfig(
     skills: sorted("skill"),
     workflows: sorted("workflow"),
     policies: sorted("policy"),
+    packs: sorted("pack"),
+    sources: [...sources].sort(),
     verification,
     strict,
     instructionFallback,

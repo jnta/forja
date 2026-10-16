@@ -41,4 +41,9 @@ export interface YamlDocumentPort {
    * keys. `source` may be empty when the file does not exist yet.
    */
   updateHarnesses(source: string, harnesses: readonly HarnessToggle[]): string;
+  /**
+   * Set or delete a top-level configuration key, preserving other keys.
+   * An empty value array deletes the key.
+   */
+  setConfigValue(source: string, key: string, value: unknown): string;
 }

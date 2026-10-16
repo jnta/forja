@@ -34,6 +34,8 @@ export interface LibraryPaths {
 export interface LoadLibraryDeps {
   readonly filesystem: FilesystemPort;
   readonly yaml: YamlParserPort;
+  /** Known harness ids, used to warn about unknown `harness:` extensions. */
+  readonly knownHarnesses?: readonly string[];
 }
 
 export interface LibraryResult {
@@ -147,7 +149,38 @@ function mergeDefinitions(
     workflows: mergeMaps(global.workflows, project.workflows),
     policies: mergeMaps(global.policies, project.policies),
     packs: mergeMaps(global.packs, project.packs),
+    tools: mergeMaps(global.tools, project.tools),
+    mcpServers: mergeMaps(global.mcpServers, project.mcpServers),
   };
+}
+
+/** Warn about `harness:` extension blocks for unknown harness ids (PRD 70). */
+function checkExtensions(
+  definitions: DefinitionMaps,
+  knownHarnesses: readonly string[] | undefined,
+  diagnostics: Diagnostic[],
+): void {
+  if (!knownHarnesses) return;
+  const known = new Set(knownHarnesses);
+  const check = (
+    id: string,
+    extensions: Readonly<Record<string, unknown>> | undefined,
+  ): void => {
+    for (const harness of Object.keys(extensions ?? {})) {
+      if (!known.has(harness)) {
+        diagnostics.push(
+          makeDiagnostic({
+            code: CODES.unknownExtension,
+            severity: "warning",
+            message: `"${id}" declares extensions for unknown harness "${harness}"`,
+            resolution: `Known harnesses: ${[...known].sort().join(", ") || "none"}.`,
+          }),
+        );
+      }
+    }
+  };
+  for (const skill of definitions.skills.values()) check(skill.id, skill.extensions);
+  for (const agent of definitions.agents.values()) check(agent.id, agent.extensions);
 }
 
 function detectCycles(
@@ -205,17 +238,22 @@ function validateReferences(
     }
   }
 
-  const configRefs: ReadonlyArray<{ name: string; kind: "skill" | "agent" | "workflow" | "policy" }> = [
+  const configRefs: ReadonlyArray<{
+    name: string;
+    kind: "skill" | "agent" | "workflow" | "policy" | "pack";
+  }> = [
     ...config.skills.map((ref) => ({ name: ref.name, kind: "skill" as const })),
     ...config.agents.map((ref) => ({ name: ref.name, kind: "agent" as const })),
     ...config.workflows.map((ref) => ({ name: ref.name, kind: "workflow" as const })),
     ...config.policies.map((ref) => ({ name: ref.name, kind: "policy" as const })),
+    ...config.packs.map((ref) => ({ name: ref.name, kind: "pack" as const })),
   ];
   const available = {
     skill: definitions.skills,
     agent: definitions.agents,
     workflow: definitions.workflows,
     policy: definitions.policies,
+    pack: definitions.packs,
   };
   for (const ref of configRefs) {
     if (!available[ref.kind].has(ref.name)) {
@@ -238,6 +276,10 @@ function buildIr(definitions: DefinitionMaps, config: ForjaConfig): ForjaIr {
     workflows: [...definitions.workflows.values()].sort((a, b) => a.id.localeCompare(b.id)),
     policies: [...definitions.policies.values()].sort((a, b) => a.id.localeCompare(b.id)),
     packs: [...definitions.packs.values()].sort((a, b) => a.id.localeCompare(b.id)),
+    tools: [...definitions.tools.values()].sort((a, b) => a.name.localeCompare(b.name)),
+    mcpServers: [...definitions.mcpServers.values()].sort((a, b) =>
+      a.id.localeCompare(b.id),
+    ),
     verification: config.verification,
   };
 }
@@ -315,6 +357,7 @@ export async function loadLibrary(
     projectDefinitions.definitions,
   );
 
+  checkExtensions(definitions, deps.knownHarnesses, diagnostics);
   validateReferences(definitions, config, diagnostics);
   detectCycles(definitions.skills, definitions.packs, diagnostics);
 

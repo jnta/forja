@@ -10,6 +10,7 @@
  * Phases 5–6.
  */
 import type { Diagnostic } from "./diagnostics";
+import { ForjaError } from "./errors";
 import type { ForjaIr } from "./ir";
 
 export interface ProjectContext {
@@ -18,6 +19,8 @@ export interface ProjectContext {
   /** Root of the global Forja library (e.g. `~/.forja`). */
   readonly globalDir: string;
   readonly homeDir: string;
+  /** Output scope: project configuration or global (personal) configuration. */
+  readonly scope?: "project" | "global";
   /** Strict compatibility: degraded semantics become errors. */
   readonly strict?: boolean;
   /** Allow instruction-only fallbacks for unsupported agent semantics. */
@@ -72,4 +75,25 @@ export interface HarnessAdapterPort {
     context: ProjectContext,
   ): Promise<readonly GeneratedArtifact[]>;
   inspect(context: ProjectContext): Promise<HarnessState>;
+}
+
+/** Adapter ids that are reserved by Forja itself. */
+export const RESERVED_ADAPTER_IDS: readonly string[] = ["forja", "core", "system"];
+
+const ADAPTER_ID_PATTERN = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
+
+/** Validate an adapter id; throws a `ForjaError` when it is unusable. */
+export function validateAdapterId(id: string): void {
+  if (!ADAPTER_ID_PATTERN.test(id)) {
+    throw new ForjaError(
+      `invalid adapter id "${id}": use lowercase kebab-case`,
+      "FORJA-COMPAT-003",
+      { kind: "config" },
+    );
+  }
+  if (RESERVED_ADAPTER_IDS.includes(id)) {
+    throw new ForjaError(`adapter id "${id}" is reserved`, "FORJA-COMPAT-003", {
+      kind: "config",
+    });
+  }
 }

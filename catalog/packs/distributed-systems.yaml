@@ -1,0 +1,8 @@
+version: 1.0.0
+description: Distributed systems engineering.
+skills:
+  - distributed-systems@^1
+  - testing@^1
+  - security-review@^1
+agents:
+  - reviewer@^1

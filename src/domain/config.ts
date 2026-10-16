@@ -19,6 +19,9 @@ export interface ForjaConfig {
   readonly skills: readonly ComponentRef[];
   readonly workflows: readonly ComponentRef[];
   readonly policies: readonly ComponentRef[];
+  readonly packs: readonly ComponentRef[];
+  /** Package source roots (local paths, git URLs) used by the resolver. */
+  readonly sources: readonly string[];
   readonly verification: VerificationDefinition;
   /** Compatibility strict mode (PRD 34): unsupported semantics become errors. */
   readonly strict: boolean;

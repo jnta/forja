@@ -62,6 +62,7 @@ class FailingFilesystem implements FilesystemPort {
   homeDir = () => this.base.homeDir();
   resolve = (...segments: readonly string[]) => this.base.resolve(...segments);
   exists = (target: string) => this.base.exists(target);
+  isWritable = (target: string) => this.base.isWritable(target);
   stat = (target: string) => this.base.stat(target);
   realpath = (target: string) => this.base.realpath(target);
   readFile = (target: string) => this.base.readFile(target);
@@ -76,6 +77,7 @@ class FailingFilesystem implements FilesystemPort {
     if (this.shouldFail(to)) return Promise.reject(new Error("injected failure"));
     return this.base.rename(from, to);
   };
+  copy = (from: string, to: string) => this.base.copy(from, to);
 }
 
 describe("applySync", () => {

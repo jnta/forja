@@ -1,6 +1,6 @@
 # Forja phased implementation plan
 
-Status: Phases 1–6 complete (2026-10-15); Phases 7–12 not started.
+Status: Phases 1–10 complete (2026-10-15); Phases 11–12 not started. v1 release candidate prepared (publishing is a separate explicit action).
 Source: [Forja PRD](./prd.md), draft 0.1, sections 1–97.
 This is the executable roadmap; the PRD remains the preserved product draft. Phases 1–10 deliver v1, Phase 11 completes additional authoring/personal-library functionality, and Phase 12 covers explicitly future ecosystem work.
 
@@ -122,6 +122,14 @@ For each completed phase update this document with date, code/PR links, test evi
 **Deliverables:** init, --global support across applicable commands, starter selection, effective-config reporting, doctor.
 **Tests/acceptance:** project-only, global-only and mixed configurations work in isolated homes; project overrides never mutate global definitions. Init is safe on repeat, cancellation leaves no partial setup, existing config is preserved, and noninteractive runs never hang. Unwritable home, absent Git/harness, unsupported versions and stale outputs yield clear doctor diagnostics. Doctor performs no repair implicitly. Verification prompt values are propagated without running commands.
 
+### Phase 7 — completion record
+
+- Completed: 2026-10-15.
+- Code: `src/application/scope.ts` (project/global resolution) and `src/application/discovery/stack.ts`; `src/application/use-cases/{init,doctor}.ts`; scope-aware native locations in `src/infrastructure/adapters/portability/shared/locations.ts`; `FilesystemPort.isWritable`; config gained `packs`; CLI `init`, `doctor`, `config` and `--global` on `init`/`validate`/`list`/`config`/`diff`/`sync`/`doctor`.
+- Decisions: [docs/decisions/0007-init-scope-and-doctor.md](./decisions/0007-init-scope-and-doctor.md) documents scope resolution, global native destinations, init safety, stack discovery, doctor's read-only contract and effective-config reporting.
+- Test evidence (Node 26.8.2, Linux x64): `npm test` → 38 files / 180 tests pass; `npm run lint` → clean; `npx tsc --noEmit` → clean; `npm run build` → succeeds. Coverage includes stack discovery, init idempotence/preservation/force/global, doctor checks (Node, Git, unwritable home, absent harness, invalid config) proving it never writes, scope resolution, and global sync writing native home configuration with an isolated home. CLI smoke: `init --yes`, `config`, `doctor`, `init --global --yes`, `validate --global`, `list --global`.
+- Limitations: interactive prompts are exercised manually (automated tests cover noninteractive paths); global sync writes to the OS home (tests isolate it); packs are referenced in config but resolved in Phase 8.
+
 ## Phase 8 — Package lifecycle and updates
 
 **Scope:** add/remove/update/outdated/list and pack management (23–27).
@@ -129,12 +137,28 @@ For each completed phase update this document with date, code/PR links, test evi
 **Deliverables:** full package lifecycle in project/global scope; readable update previews and recovery behavior.
 **Tests/acceptance:** test all command forms, nested packs, shared dependencies, exact pins, range-compatible updates, skipped major versions, local package edits and target selection. Update dry-run changes nothing. Failed downloads/conflicts leave manifest, lock, installed content and managed outputs consistent. Remove retains dependencies referenced elsewhere and all manual files. Reports distinguish unavailable metadata from “up to date.”
 
+### Phase 8 — completion record
+
+- Completed: 2026-10-15.
+- Code: `src/application/packages/{ref,available,add,remove,outdated,update}.ts`; config gained `sources`; `FilesystemPort.copy` and `YamlDocumentPort.setConfigValue`; CLI `add`, `remove`, `outdated`, `update` (with `--global`/`--kind`/`--dry-run`/`--yes`/`--json`); container builds the content cache, staging root and `createSources` factory.
+- Decisions: [docs/decisions/0008-package-lifecycle.md](./decisions/0008-package-lifecycle.md) documents install locations, transactional ordering, reference-aware pruning, outdated/update semantics and pin protection.
+- Test evidence (Node 26.8.2, Linux x64): `npm test` → 39 files / 191 tests pass; `npm run lint` → clean; `npx tsc --noEmit` → clean; `npm run build` → succeeds. Coverage includes registry add (skill + nested pack), unavailable-source add leaving state unchanged, reference-aware remove retaining shared dependencies and local definitions, outdated current/wanted/latest with unavailable metadata, update preview/apply, exact-pin protection, skipped major versions and target selection. CLI smoke: `add testing`, `add pack core`, `list`, `outdated`, `update`, `remove testing` (retained because a pack still references it).
+- Limitations: `add <local path>` expects a source root (registry-style layout), not a single component directory; packs are referenced by name and resolved through configured ranges.
+
 ## Phase 9 — Extension metadata, policies and tool declarations
 
 **Scope:** complete portable policy/workflow behavior and tool/MCP declarations promised in sections 1, 4, 11–12; sections 33–50 and 66–70.
 **Implementation order:** 1. Specify declarative MCP/tool schema, trust and credential references; tool translation remains declarative, with documented exact/degraded/unsupported support. 2. Extend IR without introducing harness fields into domain contracts. 3. Compile declarations through each adapter's capability matrix. 4. Provide a documented adapter authoring contract and sample adapter. 5. Ship a versioned built-in catalog: orchestrator/implementer/reviewer (researcher optional), the ten core skills in section 47, and core-engineering/java-backend/frontend/distributed-systems packs; demonstrate composable technology skills.
 **Deliverables:** policy/workflow fixtures, supported declarative tool mappings, extension validation, adapter developer guide.
 **Tests/acceptance:** ordered workflow steps and verification strings survive each compiler. Unsupported declarations fail or use an explicit documented fallback. No workflow execution, LLM call, server startup or skill script execution occurs. Credential references do not copy secrets into generated files/state/logs. A fixture adapter can be registered without changing domain use cases; reserved IDs, unknown extensions and invalid output paths are rejected. All bundled catalog packages pass validation, resolve their dependencies, preserve referenced assets and compile through every supported adapter. Skill composition is expressed through references/instructions; Forja does not dynamically run agents.
+
+### Phase 9 — completion record
+
+- Completed: 2026-10-15.
+- Code: `src/domain/tools.ts` (tool/MCP/credential contracts) and IR fields (`tools`, `mcpServers`, agent `tools`/`mcp`); agent schema `tools`/`mcp`; loader aggregation + unknown-extension warning (`FORJA-CFG-014`); `declarationDiagnostics` + `validateAdapterId`/reserved ids (`FORJA-COMPAT-003`); instructions renderer Tools/MCP sections (references only); sample adapter + authoring guide; built-in `catalog/` (3 agents, 10 core skills, 4 packs).
+- Decisions: [docs/decisions/0009-extensions-and-catalog.md](./decisions/0009-extensions-and-catalog.md) and [docs/adapters/authoring.md](./adapters/authoring.md).
+- Test evidence (Node 26.8.2, Linux x64): `npm test` → 41 files / 204 tests pass; `npm run lint` → clean; `npx tsc --noEmit` → clean; `npm run build` → succeeds. Coverage includes credential references not copying secrets, declarative fallback diagnostics, unknown-extension warnings, reserved/malformed adapter ids, fixture adapter registration, escaping artifact rejection, compiler adapters importing no execution/LLM stacks, and the catalog validating, resolving pack dependencies, preserving the `documentation` asset and compiling through all four adapters with ordered workflow steps and verification strings.
+- Limitations: tools/MCP compile to instructions (native configuration is manual by design); the catalog ships in the repository and is not yet bundled into the CLI package.
 
 ## Phase 10 — Release readiness and reproducible distribution
 

@@ -1,0 +1,13 @@
+description: Plans and delegates work across specialists.
+type: primary
+capabilities:
+  filesystem:
+    read: true
+    write: false
+  shell:
+    enabled: false
+    mutating: false
+  network: false
+skills:
+  - testing
+  - code-review

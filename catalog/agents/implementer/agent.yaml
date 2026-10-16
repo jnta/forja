@@ -1,0 +1,14 @@
+description: Implements bounded changes and runs focused tests.
+type: subagent
+capabilities:
+  filesystem:
+    read: true
+    write: true
+  shell:
+    enabled: true
+    mutating: true
+  network: true
+skills:
+  - testing
+  - debugging
+  - git-workflow

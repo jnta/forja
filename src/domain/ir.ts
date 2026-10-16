@@ -7,6 +7,7 @@
  * with declarative tool/MCP metadata.
  */
 import type { ComponentRef } from "./references";
+import type { McpServerDeclaration, ToolDeclaration } from "./tools";
 
 export type AgentType = "primary" | "subagent";
 
@@ -27,6 +28,10 @@ export interface AgentDefinition {
   readonly capabilities: AgentCapabilities;
   /** Skill ids this agent may use. */
   readonly skills: readonly string[];
+  /** Declarative tool names this agent may use. */
+  readonly tools?: readonly string[];
+  /** MCP server ids this agent may use. */
+  readonly mcp?: readonly string[];
   /** Harness-specific metadata (PRD 70), keyed by harness id. */
   readonly extensions?: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
 }
@@ -98,5 +103,9 @@ export interface ForjaIr {
   readonly workflows: readonly WorkflowDefinition[];
   readonly policies: readonly PolicyDefinition[];
   readonly packs: readonly PackDefinition[];
+  /** Declarative tools referenced by the configuration (PRD 69). */
+  readonly tools: readonly ToolDeclaration[];
+  /** Declarative MCP servers referenced by the configuration (PRD 69). */
+  readonly mcpServers: readonly McpServerDeclaration[];
   readonly verification: VerificationDefinition;
 }

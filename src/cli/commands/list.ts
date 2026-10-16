@@ -1,5 +1,6 @@
 import { listLibrary } from "@/application/use-cases/list";
 
+import { resolveCommandScope } from "./paths";
 import type { CommandModule } from "./types";
 
 function renderGroup(
@@ -19,12 +20,14 @@ export const listCommand: CommandModule = {
     program
       .command("list")
       .description("list configured harnesses and available components")
+      .option("--global", "list the global (personal) library")
       .option("--json", "emit machine-readable JSON")
-      .action(async (options: { json?: boolean }) => {
+      .action(async (options: { json?: boolean; global?: boolean }) => {
         const { services } = context;
+        const { libraryPaths } = resolveCommandScope(services, options.global);
         const result = await listLibrary(
           { filesystem: services.filesystem, yaml: services.yaml },
-          { projectDir: services.projectDir, globalDir: services.globalDir },
+          libraryPaths,
         );
 
         if (options.json) {

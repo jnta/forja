@@ -8,8 +8,9 @@ export const diffCommand: CommandModule = {
     program
       .command("diff")
       .description("show generated changes without writing them")
+      .option("--global", "operate on the global (personal) configuration")
       .option("--json", "emit machine-readable JSON")
-      .action(async (options: { json?: boolean }) => {
+      .action(async (options: { json?: boolean; global?: boolean }) => {
         const { services } = context;
         const report = await runSync(
           {
@@ -22,6 +23,7 @@ export const diffCommand: CommandModule = {
               projectDir: services.projectDir,
               globalDir: services.globalDir,
             },
+            scope: options.global ? "global" : "project",
             mode: "dry-run",
           },
         );

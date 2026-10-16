@@ -6,6 +6,7 @@ import { registerCommands } from "./commands";
 import { createCliServices, type CliServices } from "./container";
 import { formatForjaError, formatUnexpectedError } from "./errors";
 import { ExitCode, exitCodeFor, isCliExit, type ExitCodeValue } from "./exit-codes";
+import type { ReporterLevel } from "@/domain/diagnostics";
 import { CLI_VERSION } from "./version";
 
 export interface CliIo {
@@ -39,6 +40,9 @@ export function buildProgram(
     .description("Portable tooling for AI coding agents.")
     .version(version, "-v, --version", "print the Forja CLI version")
     .helpOption("-h, --help", "display help for a command")
+    .option("--quiet", "only report errors")
+    .option("--verbose", "report all diagnostics")
+    .option("--debug", "report all diagnostics and error causes")
     .allowExcessArguments(false)
     .showHelpAfterError()
     .configureOutput({
@@ -59,6 +63,7 @@ export function buildProgram(
 function handleFailure(
   error: unknown,
   stderr: NodeJS.WritableStream,
+  debug: boolean,
 ): ExitCodeValue {
   if (isCliExit(error)) return error.code;
 
@@ -69,11 +74,11 @@ function handleFailure(
   }
 
   if (isForjaError(error)) {
-    stderr.write(formatForjaError(error));
+    stderr.write(formatForjaError(error, { debug }));
     return exitCodeFor(error);
   }
 
-  stderr.write(formatUnexpectedError(error));
+  stderr.write(formatUnexpectedError(error, { debug }));
   return ExitCode.Failure;
 }
 
@@ -85,15 +90,20 @@ function handleFailure(
 export async function runCli(options: RunCliOptions = {}): Promise<number> {
   const stdout = options.stdout ?? process.stdout;
   const stderr = options.stderr ?? process.stderr;
-  const services =
-    options.services ?? createCliServices({ stderr });
+  const argv = options.argv ? [...options.argv] : process.argv.slice(2);
+  const level: ReporterLevel = argv.includes("--debug")
+    ? "debug"
+    : argv.includes("--verbose")
+      ? "verbose"
+      : argv.includes("--quiet")
+        ? "quiet"
+        : "normal";
+  const services = options.services ?? createCliServices({ stderr, level });
   const program = buildProgram(
     services,
     { stdout, stderr },
     options.version ?? CLI_VERSION,
   );
-
-  const argv = options.argv ? [...options.argv] : process.argv.slice(2);
 
   try {
     if (argv.length === 0) {
@@ -103,6 +113,6 @@ export async function runCli(options: RunCliOptions = {}): Promise<number> {
     await program.parseAsync(argv, { from: "user" });
     return ExitCode.Success;
   } catch (error) {
-    return handleFailure(error, stderr);
+    return handleFailure(error, stderr, level === "debug");
   }
 }

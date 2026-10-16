@@ -2,16 +2,30 @@
   "name": "@forja/cli",
   "version": "0.1.0",
   "description": "Forja CLI: define your AI engineering workflow once and use it across coding-agent harnesses.",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "private": true,
   "type": "module",
   "bin": {
     "forja": "dist/cli.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "LICENSE"
   ],
   "engines": {
     "node": ">=22"
+  },
+  "keywords": [
+    "forja",
+    "agents",
+    "skills",
+    "opencode",
+    "claude-code",
+    "codex"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jnta/forja.git",
+    "directory": "packages/cli"
   }
 }

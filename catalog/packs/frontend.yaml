@@ -1,0 +1,8 @@
+version: 1.0.0
+description: Frontend engineering.
+skills:
+  - testing@^1
+  - api-design@^1
+  - refactoring@^1
+agents:
+  - implementer@^1

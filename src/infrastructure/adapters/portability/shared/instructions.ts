@@ -1,4 +1,5 @@
 import type { PolicyDefinition, VerificationDefinition, WorkflowDefinition } from "@/domain/ir";
+import type { McpServerDeclaration, ToolDeclaration } from "@/domain/tools";
 
 export const MANAGED_BEGIN = "<!-- forja:begin -->";
 export const MANAGED_END = "<!-- forja:end -->";
@@ -7,6 +8,44 @@ export interface InstructionInput {
   readonly workflows: readonly WorkflowDefinition[];
   readonly policies: readonly PolicyDefinition[];
   readonly verification: VerificationDefinition;
+  readonly tools?: readonly ToolDeclaration[];
+  readonly mcpServers?: readonly McpServerDeclaration[];
+}
+
+function renderDeclarations(input: InstructionInput): string[] {
+  const sections: string[] = [];
+
+  const tools = [...(input.tools ?? [])].sort((a, b) => a.name.localeCompare(b.name));
+  if (tools.length > 0) {
+    const lines = ["## Tools", ""];
+    for (const tool of tools) {
+      const origin = tool.source === "mcp" ? ` (mcp: ${tool.server})` : "";
+      lines.push(`- ${tool.name}${origin}`);
+    }
+    sections.push(lines.join("\n"));
+  }
+
+  const servers = [...(input.mcpServers ?? [])].sort((a, b) => a.id.localeCompare(b.id));
+  if (servers.length > 0) {
+    const lines = ["## MCP servers", ""];
+    for (const server of servers) {
+      const target = server.command
+        ? `${server.command}${server.args ? ` ${server.args.join(" ")}` : ""}`
+        : (server.url ?? "");
+      lines.push(`- ${server.id} (${server.transport})${target ? `: ${target}` : ""}`);
+      for (const credential of server.credentials ?? []) {
+        // References only: the secret value is never written.
+        lines.push(`  - credential ${credential.name} from ${credential.from} ${credential.key}`);
+      }
+    }
+    lines.push("");
+    lines.push(
+      "Configure these servers natively in your harness; Forja does not write secret values.",
+    );
+    sections.push(lines.join("\n"));
+  }
+
+  return sections;
 }
 
 /**
@@ -43,6 +82,8 @@ export function renderInstructionsBlock(input: InstructionInput): string {
     lines.push("A task is not complete until full verification succeeds.");
     sections.push(lines.join("\n"));
   }
+
+  sections.push(...renderDeclarations(input));
 
   if (sections.length === 0) return "";
 

@@ -2,6 +2,7 @@ import type {
   Diagnostic,
   DiagnosticReporterPort,
   DiagnosticSeverity,
+  ReporterLevel,
 } from "@/domain/diagnostics";
 
 const SEVERITY_LABEL: Record<DiagnosticSeverity, string> = {
@@ -9,6 +10,20 @@ const SEVERITY_LABEL: Record<DiagnosticSeverity, string> = {
   warning: "warning",
   info: "info",
 };
+
+export type { ReporterLevel };
+
+function included(level: ReporterLevel, severity: DiagnosticSeverity): boolean {
+  switch (level) {
+    case "quiet":
+      return severity === "error";
+    case "normal":
+      return severity !== "info";
+    case "verbose":
+    case "debug":
+      return true;
+  }
+}
 
 function formatLocation(diagnostic: Diagnostic): string {
   const { location } = diagnostic;
@@ -35,17 +50,22 @@ export function formatDiagnostic(diagnostic: Diagnostic): string {
 export interface ConsoleReporterOptions {
   /** Destination stream. Defaults to `process.stderr`. */
   readonly stream?: NodeJS.WritableStream;
+  /** Verbosity. `quiet` shows errors only; `verbose`/`debug` show info too. */
+  readonly level?: ReporterLevel;
 }
 
 /** Writes diagnostics as plain, greppable text. */
 export class ConsoleDiagnosticReporter implements DiagnosticReporterPort {
   private readonly stream: NodeJS.WritableStream;
+  private readonly level: ReporterLevel;
 
   constructor(options: ConsoleReporterOptions = {}) {
     this.stream = options.stream ?? process.stderr;
+    this.level = options.level ?? "normal";
   }
 
   report(diagnostic: Diagnostic): void {
+    if (!included(this.level, diagnostic.severity)) return;
     this.stream.write(formatDiagnostic(diagnostic));
   }
 

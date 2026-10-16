@@ -24,6 +24,8 @@ export const configContribution = z.object({
   skills: componentNameList.optional(),
   workflows: componentNameList.optional(),
   policies: componentNameList.optional(),
+  packs: componentNameList.optional(),
+  sources: z.array(z.string().min(1)).optional(),
   verification: verificationInput.optional(),
   compatibility: z
     .object({
@@ -68,6 +70,21 @@ export const shellSchema = z.union([
   z.object({ enabled: z.boolean(), mutating: z.boolean().optional() }),
 ]);
 
+export const credentialSchema = z.object({
+  name: componentName,
+  from: z.enum(["env", "file", "keychain"]),
+  key: z.string().min(1),
+});
+
+export const mcpServerSchema = z.object({
+  id: componentName,
+  transport: z.enum(["stdio", "http", "sse"]),
+  command: z.string().min(1).optional(),
+  args: z.array(z.string()).optional(),
+  url: z.string().min(1).optional(),
+  credentials: z.array(credentialSchema).optional(),
+});
+
 export const agentSchema = z.object({
   name: componentName.optional(),
   description: z.string().min(1).optional(),
@@ -78,6 +95,8 @@ export const agentSchema = z.object({
     network: z.boolean().optional(),
   }),
   skills: componentNameList,
+  tools: z.array(z.string().min(1)).optional(),
+  mcp: z.array(mcpServerSchema).optional(),
   harness: harnessExtensions,
 });
 
